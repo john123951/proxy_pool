@@ -12,6 +12,7 @@
 """
 __author__ = 'J_hao'
 
+from requests.models import Response
 import requests
 import random
 import time
@@ -36,7 +37,7 @@ class WebRequest(object):
             'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; QQDownload 732; .NET4.0C; .NET4.0E)',
             'Mozilla/5.0 (Windows NT 5.1; U; en; rv:1.8.1) Gecko/20061208 Firefox/2.0.0 Opera 9.50',
             'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0',
-            ]
+        ]
         return random.choice(ua_list)
 
     @property
@@ -69,18 +70,16 @@ class WebRequest(object):
             headers.update(header)
         while True:
             try:
-                html = requests.get(url, headers=headers, timeout=timeout)
-                # if filter(lambda key: key in html.content, retry_flag):
-                # 原filter语句执行if判断所有情况均为True情况，python3与python2的区别？
-                # python3中filter返回filter对象，即使为空，if会判断为True
-                # python2中filter返回list对象，为空，if判断为False
-                for f in retry_flag:
-                    if f in html.content:
-                        raise Exception
+                html = requests.get(url, headers=headers, timeout=timeout, **kwargs)
+                if any(f in html.content for f in retry_flag):
+                    raise Exception
                 return html
             except Exception as e:
                 print(e)
                 retry_time -= 1
                 if retry_time <= 0:
-                    return
+                    # 多次请求失败
+                    resp = Response()
+                    resp.status_code = 200
+                    return resp
                 time.sleep(retry_interval)
